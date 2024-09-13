@@ -38,7 +38,7 @@ spec:
         pythonVersion:
           title: Python Version
           type: string
-          description: Choose the Python version (default: 3.9)
+          description: Choose the Python version
           default: "3.9"
         repoUrl:
           title: GitHub Repository Location
