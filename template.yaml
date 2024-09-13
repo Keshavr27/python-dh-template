@@ -84,7 +84,7 @@ spec:
       name: Fetch Documentation
       action: fetch:plain
       input:
-        targetPath: docs
+        targetPath: ./
         url: https://github.com/datawire/hello-world-python.git
 
     - id: publish
