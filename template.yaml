@@ -1,0 +1,141 @@
+apiVersion: scaffolder.backstage.io/v1beta3
+kind: Template
+metadata:
+  name: python-app-openshift-template
+  title: Python Application Scaffold and OpenShift Deploy Template
+  description: Template to scaffold, deploy to OpenShift, and register a Python application
+  tags:
+    - python
+    - openshift
+    - service
+    - backend
+spec:
+  owner: backstage/python-team
+  type: service
+
+  parameters:
+    - title: Provide Application Details
+      required:
+        - name
+        - owner
+        - openshiftUrl
+        - username
+        - password
+      properties:
+        name:
+          title: Application Name
+          type: string
+          description: The unique name of the Python application.
+          ui:autofocus: true
+        owner:
+          title: Owner
+          type: string
+          description: The owner of the application (e.g., team or user).
+          ui:field: OwnerPicker
+          ui:options:
+            catalogFilter:
+              kind: Group
+        pythonVersion:
+          title: Python Version
+          type: string
+          description: Choose the Python version (default: 3.9)
+          default: "3.9"
+        repoUrl:
+          title: GitHub Repository Location
+          type: string
+          description: The URL of the GitHub repository where the Python application will be published.
+          ui:field: RepoUrlPicker
+          ui:options:
+            allowedHosts:
+              - github.com
+        openshiftUrl:
+          title: OpenShift Cluster URL
+          type: string
+          description: The URL of the OpenShift cluster (e.g., https://api.openshift.example.com).
+          default: "https://api.sandbox-m4.g2pi.p1.openshiftapps.com:6443"
+        username:
+          title: OpenShift Username
+          type: string
+          description: The username for logging into OpenShift.
+          default: "kesavramk95"
+        password:
+          title: OpenShift Password
+          type: string
+          description: The password for logging into OpenShift.
+          ui:widget: password
+        namespace:
+          title: OpenShift Project (Namespace)
+          type: string
+          description: The OpenShift project/namespace where the application will be deployed.
+          default: "kesavramk95-dev"
+
+  steps:
+    - id: fetch-base
+      name: Fetch Base Template
+      action: fetch:template
+      input:
+        url: ./template/python-app
+        values:
+          name: ${{ parameters.name }}
+          owner: ${{ parameters.owner }}
+          pythonVersion: ${{ parameters.pythonVersion }}
+
+    - id: setup-virtual-env
+      name: Set up Python Virtual Environment
+      action: shell:run
+      input:
+        workingDirectory: .
+        command: |
+          python${{ parameters.pythonVersion }} -m venv venv
+          source venv/bin/activate
+          pip install -r requirements.txt
+
+    - id: fetch-docs
+      name: Fetch Documentation
+      action: fetch:plain
+      input:
+        targetPath: docs
+        url: https://github.com/example/python-docs
+
+    - id: publish
+      name: Publish to GitHub
+      action: publish:github
+      input:
+        allowedHosts: ['github.com']
+        description: Python application scaffolded by Backstage.
+        repoUrl: ${{ parameters.repoUrl }}
+
+    - id: login-openshift
+      name: Login to OpenShift
+      action: shell:run
+      input:
+        command: |
+          echo "Logging into OpenShift at ${{ parameters.openshiftUrl }}..."
+          oc login ${{ parameters.openshiftUrl }} --username=${{ parameters.username }} --password=${{ parameters.password }}
+
+    - id: deploy-openshift
+      name: Deploy Python Application to OpenShift
+      action: shell:run
+      input:
+        command: |
+          echo "Deploying to OpenShift project ${{ parameters.namespace }}..."
+          oc project ${{ parameters.namespace }}
+          oc new-app python:${{ parameters.pythonVersion }}~${{ parameters.repoUrl }} --name=${{ parameters.name }}
+          oc expose svc/${{ parameters.name }}
+
+    - id: register
+      name: Register in Backstage Catalog
+      action: catalog:register
+      input:
+        repoContentsUrl: ${{ steps['publish'].output.repoContentsUrl }}
+        catalogInfoPath: '/catalog-info.yaml'
+
+  output:
+    links:
+      - title: GitHub Repository
+        url: ${{ steps['publish'].output.remoteUrl }}
+      - title: View in Backstage Catalog
+        icon: catalog
+        entityRef: ${{ steps['register'].output.entityRef }}
+      - title: OpenShift Application URL
+        url: ${{ steps['deploy-openshift'].output.routeUrl }}
