@@ -97,21 +97,19 @@ spec:
 
     - id: login-openshift
       name: Login to OpenShift
-      action: shell:run
+      action: execute:openShiftCommand
       input:
-        command: |
-          echo "Logging into OpenShift at ${{ parameters.openshiftUrl }}..."
-          oc login ${{ parameters.openshiftUrl }} --username=${{ parameters.username }} --password=${{ parameters.password }}
+        commands: 
+          - oc login ${{ parameters.openshiftUrl }} --username=${{ parameters.username }} --password=${{ parameters.password }}
 
     - id: deploy-openshift
       name: Deploy Python Application to OpenShift
-      action: shell:run
+      action: execute:openShiftCommand
       input:
-        command: |
-          echo "Deploying to OpenShift project ${{ parameters.namespace }}..."
-          oc project ${{ parameters.namespace }}
-          oc new-app python:${{ parameters.pythonVersion }}~${{ parameters.repoUrl }} --name=${{ parameters.name }}
-          oc expose svc/${{ parameters.name }}
+        commands:
+          - oc project ${{ parameters.namespace }}
+          - oc new-app python:${{ parameters.pythonVersion }}~${{ parameters.repoUrl }} --name=${{ parameters.name }}
+          - oc expose svc/${{ parameters.name }}
 
     - id: register
       name: Register in Backstage Catalog
