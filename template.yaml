@@ -80,22 +80,12 @@ spec:
           owner: ${{ parameters.owner }}
           pythonVersion: ${{ parameters.pythonVersion }}
 
-    - id: setup-virtual-env
-      name: Set up Python Virtual Environment
-      action: shell:run
-      input:
-        workingDirectory: .
-        command: |
-          python${{ parameters.pythonVersion }} -m venv venv
-          source venv/bin/activate
-          pip install -r requirements.txt
-
     - id: fetch-docs
       name: Fetch Documentation
       action: fetch:plain
       input:
         targetPath: docs
-        url: https://github.com/example/python-docs
+        url: https://github.com/datawire/hello-world-python.git
 
     - id: publish
       name: Publish to GitHub
